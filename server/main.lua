@@ -28,6 +28,51 @@ local function fail(reason)
     return { ok = false, reason = reason, message = Services.reasonText(reason) }
 end
 
+local PHOTOS = {} -- spawn code -> address or false, kept for this server run
+
+local function photoFor(code)
+    if type(code) ~= 'string' or code == '' then return nil end
+    if PHOTOS[code] ~= nil then return PHOTOS[code] or nil end
+    local found = false
+    if GetResourceState('jg-vehiclestudio') == 'started' then
+        local ok, images = pcall(function()
+            return exports['jg-vehiclestudio']:getImages({ code }, 'default')
+        end)
+        if ok and type(images) == 'table' then
+            found = Services.pickPhoto(images[code]) or false
+        end
+    end
+    PHOTOS[code] = found
+    return found or nil
+end
+
+local function withRequestPhoto(view)
+    if type(view) ~= 'table' then return view end
+    local copy = {}
+    for k, v in pairs(view) do copy[k] = v end
+    copy.photo = photoFor(view.code)
+    return copy
+end
+
+local function withDriverPhotos(view)
+    if type(view) ~= 'table' then return view end
+    local copy = {}
+    for k, v in pairs(view) do copy[k] = v end
+    if type(view.offer) == 'table' then
+        local offer = {}
+        for k, v in pairs(view.offer) do offer[k] = v end
+        offer.photo = photoFor(view.offer.vehicleCode)
+        copy.offer = offer
+    end
+    if type(view.job) == 'table' then
+        local job = {}
+        for k, v in pairs(view.job) do job[k] = v end
+        job.photo = photoFor(view.job.vehicleCode)
+        copy.job = job
+    end
+    return copy
+end
+
 local function trim(text)
     local clean = (text or ''):gsub('^%s+', '')
     clean = clean:gsub('%s+$', '')
@@ -56,8 +101,8 @@ local function stateFor(source)
             isTowDriver = job.name == cfg.jobName,
         },
         fees = { repair = cfg.repairTowFee, impound = cfg.emergencyTowFee },
-        request = tow('GetRequestStatus', source) or false,
-        driver = tow('GetDriverView', source) or false,
+        request = withRequestPhoto(tow('GetRequestStatus', source)) or false,
+        driver = withDriverPhotos(tow('GetDriverView', source)) or false,
     }
 end
 
@@ -70,7 +115,7 @@ lib.callback.register('dps-services:requestTow', function(source, kind, scan)
     if not ok then return fail(payload) end
     local done, result = tow('RequestService', source, payload)
     if not done then return fail(result) end
-    return { ok = true, request = result }
+    return { ok = true, request = withRequestPhoto(result) }
 end)
 
 lib.callback.register('dps-services:cancelRequest', function(source)
@@ -83,7 +128,21 @@ lib.callback.register('dps-services:driverAnswer', function(source, jobId, accep
     if type(jobId) ~= 'string' then return fail('no_offer') end
     local done, reason = tow(accept == true and 'AcceptOffer' or 'DeclineOffer', source, jobId)
     if not done then return fail(reason) end
-    return { ok = true, driver = tow('GetDriverView', source) or false }
+    return { ok = true, driver = withDriverPhotos(tow('GetDriverView', source)) or false }
+end)
+
+lib.callback.register('dps-services:vehicleInfo', function(source, netId)
+    netId = tonumber(netId)
+    local entity = netId and NetworkGetEntityFromNetworkId(netId) or 0
+    if entity == 0 or not DoesEntityExist(entity) or GetEntityType(entity) ~= 2 then return false end
+    local ped = GetPlayerPed(source)
+    if ped == 0 or #(GetEntityCoords(ped) - GetEntityCoords(entity)) > 30.0 then return false end
+    local ok, entry = pcall(function() return exports.qbx_core:GetVehiclesByHash(GetEntityModel(entity)) end)
+    if not ok or type(entry) ~= 'table' or type(entry.model) ~= 'string' then return false end
+    local code = entry.model:lower()
+    local label = type(entry.name) == 'string' and entry.name ~= ''
+        and (((type(entry.brand) == 'string' and entry.brand ~= '') and (entry.brand .. ' ') or '') .. entry.name) or nil
+    return { code = code, label = label, photo = photoFor(code) or false }
 end)
 
 local function notify(source, text)
@@ -107,21 +166,21 @@ AddEventHandler('dps-towjob:requestUpdate', function(citizenid, view, changed)
     if not player then return end
     local source = player.PlayerData.source
     local open = view.status ~= 'delivered' and view.status ~= 'cancelled'
-    TriggerClientEvent('dps-services:client:push', source, 'request', view)
+    TriggerClientEvent('dps-services:client:push', source, 'request', withRequestPhoto(view))
     if changed then notify(source, Services.statusText(view)) end
     if not open then
         SetTimeout(15000, function()
             local current = exports.qbx_core:GetPlayerByCitizenId(citizenid)
             if not current then return end
             local currentSource = current.PlayerData.source
-            TriggerClientEvent('dps-services:client:push', currentSource, 'request', tow('GetRequestStatus', currentSource) or false)
+            TriggerClientEvent('dps-services:client:push', currentSource, 'request', withRequestPhoto(tow('GetRequestStatus', currentSource)) or false)
         end)
     end
 end)
 
 AddEventHandler('dps-towjob:driverUpdate', function(source)
     if type(source) ~= 'number' or not GetPlayerName(source) then return end
-    TriggerClientEvent('dps-services:client:push', source, 'driver', tow('GetDriverView', source) or false)
+    TriggerClientEvent('dps-services:client:push', source, 'driver', withDriverPhotos(tow('GetDriverView', source)) or false)
 end)
 
 -- Server console only: one line of proof that the app can reach the tow script.

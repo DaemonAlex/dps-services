@@ -118,7 +118,15 @@ RegisterNUICallback('getState', function(_, cb)
 end)
 
 RegisterNUICallback('scan', function(_, cb)
-    cb({ vehicle = scanVehicle() })
+    local vehicle = scanVehicle()
+    if vehicle and type(vehicle.netId) == 'number' then
+        local info = lib.callback.await('dps-services:vehicleInfo', false, vehicle.netId)
+        if info then
+            vehicle.photo = info.photo or nil
+            if info.label then vehicle.model = info.label end
+        end
+    end
+    cb({ vehicle = vehicle })
 end)
 
 RegisterNUICallback('requestTow', function(data, cb)

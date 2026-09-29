@@ -112,4 +112,21 @@ function Services.reasonText(reason)
     return REASONS[reason] or 'That did not work. Try again in a moment.'
 end
 
+local function goodAddress(value)
+    if type(value) ~= 'string' or #value == 0 or #value > 400 then return false end
+    return value:sub(1, 8) == 'https://' or value:sub(1, 6) == 'nui://'
+end
+
+--- First usable picture address from a jg-vehiclestudio entry, or nil.
+function Services.pickPhoto(entry)
+    if type(entry) ~= 'table' then return nil end
+    if goodAddress(entry.image) then return entry.image end
+    if type(entry.fallbacks) == 'table' then
+        for i = 1, #entry.fallbacks do
+            if goodAddress(entry.fallbacks[i]) then return entry.fallbacks[i] end
+        end
+    end
+    return nil
+end
+
 return Services
