@@ -128,6 +128,7 @@ local REASONS = {
     gone = 'The caller cancelled that request.',
     unavailable = 'Tow dispatch is offline right now.',
     not_owner = 'A repair tow is for your own vehicle. This one is not registered to you.',
+    already_requested = 'A tow is already on the way for this vehicle.',
 }
 
 function Services.reasonText(reason)
