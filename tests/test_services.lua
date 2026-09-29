@@ -47,6 +47,7 @@ T.test('statusText: one plain sentence per status', function()
     T.eq(S.statusText({ status = 'hooked', destination = 'LSPD Impound' }).line, 'Your vehicle is on the truck, heading to LSPD Impound.')
     T.eq(S.statusText({ status = 'hooked' }).line, 'Your vehicle is on the truck.')
     T.eq(S.statusText({ status = 'delivered', destination = 'LSPD Impound' }).line, 'Delivered to LSPD Impound.')
+    T.eq(S.statusText({ status = 'arrived', driverName = 'City Tow', cityTow = true }).line, 'City Tow has arrived. Leave the vehicle empty.')
     T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_gone', fee = 200 }).line, 'Cancelled: the vehicle was no longer there. Nothing was charged.')
     T.eq(S.statusText({ status = 'cancelled' }).line, 'Request cancelled.')
     T.eq(S.statusText({ status = 'queued' }).title, 'City Services')
@@ -80,6 +81,16 @@ T.test('reasonText covers not_owner; statusText covers the City Tow cancel reaso
     T.truthy(vehicleGone ~= 'Request cancelled.', 'vehicle_gone differs from the plain fallback')
     T.truthy(vehicleOccupied ~= 'Request cancelled.', 'vehicle_occupied differs from the plain fallback')
     T.truthy(noDestination ~= 'Request cancelled.', 'no_destination differs from the plain fallback')
+end)
+
+T.test('delivered names the place the owner can collect the vehicle from', function()
+    T.eq(S.statusText({ status = 'delivered', kind = 'repair', destination = 'LS Customs Burton', handoff = 'Legion Square garage' }).line,
+        'Delivered. Your vehicle is in the Legion Square garage.')
+    T.eq(S.statusText({ status = 'delivered', kind = 'impound', destination = 'LSPD Impound', handoff = 'Impound A' }).line,
+        'Delivered to Impound A.')
+    -- no hand-off (an unowned vehicle): the old sentence stands
+    T.eq(S.statusText({ status = 'delivered', kind = 'repair', destination = 'LS Customs Burton' }).line,
+        'Delivered to LS Customs Burton.')
 end)
 
 T.test('feeLine says what happened to the money, and never lies about it', function()

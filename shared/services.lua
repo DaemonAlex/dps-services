@@ -80,7 +80,11 @@ function Services.statusText(view)
             line = ('%s accepted and is on the way.'):format(driver)
         end
     elseif status == 'arrived' then
-        line = ('%s has arrived.'):format(driver)
+        if view.cityTow then
+            line = ('%s has arrived. Leave the vehicle empty.'):format(driver)
+        else
+            line = ('%s has arrived.'):format(driver)
+        end
     elseif status == 'hooked' then
         if view.destination then
             line = ('Your vehicle is on the truck, heading to %s.'):format(view.destination)
@@ -88,7 +92,11 @@ function Services.statusText(view)
             line = 'Your vehicle is on the truck.'
         end
     elseif status == 'delivered' then
-        if view.destination then
+        if view.handoff and view.kind == 'repair' then
+            line = ('Delivered. Your vehicle is in the %s.'):format(view.handoff)
+        elseif view.handoff then
+            line = ('Delivered to %s.'):format(view.handoff)
+        elseif view.destination then
             line = ('Delivered to %s.'):format(view.destination)
         else
             line = 'Your vehicle was delivered.'

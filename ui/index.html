@@ -164,8 +164,9 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
     else if (view.status === 'accepted') {
       var m = minutes(left(S.etaBase, S.etaSec));
       headline = (view.driverName || 'A driver') + (m > 0 ? ' is about ' + m + ' min away' : ' is on the way');
-    } else if (view.status === 'arrived') headline = (view.driverName || 'The driver') + ' has arrived';
+    } else if (view.status === 'arrived') headline = (view.driverName || 'The driver') + ' has arrived' + (view.cityTow ? '. Leave the vehicle empty' : '');
     else if (view.status === 'hooked') headline = 'Your vehicle is on the truck';
+    else if (view.handoff) headline = view.kind === 'repair' ? 'Your vehicle is in the ' + view.handoff : 'Delivered to ' + view.handoff;
     else headline = 'Delivered';
 
     var steps = '';
