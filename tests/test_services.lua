@@ -82,7 +82,7 @@ T.test('reasonText covers not_owner; statusText covers the City Tow cancel reaso
     T.truthy(noDestination ~= 'Request cancelled.', 'no_destination differs from the plain fallback')
 end)
 
-T.test('pickPhoto: the image, then the first usable fallback, then nil', function()
+T.test('pickPhoto: our own image or nil', function()
     T.eq(S.pickPhoto({ image = 'https://a/x.webp', fallbacks = { 'https://b/y.webp' } }), 'https://a/x.webp')
     T.eq(S.pickPhoto({ fallbacks = { 'https://b/y.webp', 'https://c/z.png' } }), nil)
     T.eq(S.pickPhoto({ image = '', fallbacks = {} }), nil)

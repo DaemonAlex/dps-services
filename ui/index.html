@@ -24,6 +24,7 @@ main{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 24px;display:flex;fle
 .card{background:var(--cd-panel);border:1px solid var(--cd-border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .card h3{margin:0;font:11px/1.2 Roboto,sans-serif;text-transform:uppercase;letter-spacing:1px;color:var(--cd-dim)}
 .big{font:700 18px/1.3 Orbitron,sans-serif;color:var(--cd-ink)}
+.big.mono{font:700 18px/1.3 "Roboto Mono",ui-monospace,monospace}
 .line{font-size:15px}
 .dim{color:var(--cd-dim)}
 .mono{font:13px var(--mono);color:var(--cd-dim)}
@@ -90,15 +91,21 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
   function money(n) { return '$' + Number(n || 0).toLocaleString('en-US'); }
   function minutes(sec) { return sec > 0 ? Math.ceil(sec / 60) : 0; }
 
-  function setRequest(view) {
+  function setRequest(view, prevStatus) {
     if (!S.state) return;
+    var oldStatus = arguments.length > 1 ? prevStatus : (S.state.request && S.state.request.status);
+    var newStatus = view && view.status;
+    if (oldStatus !== newStatus) S.note = null;
     S.state.request = view || false;
     if (view && view.status === 'accepted' && typeof view.etaSeconds === 'number') {
       S.etaBase = Date.now(); S.etaSec = view.etaSeconds;
     } else { S.etaSec = null; }
   }
-  function setDriver(view) {
+  function setDriver(view, prevOfferId) {
     if (!S.state) return;
+    var oldOfferId = arguments.length > 1 ? prevOfferId : (S.state.driver && S.state.driver.offer && S.state.driver.offer.id);
+    var newOfferId = view && view.offer && view.offer.id;
+    if (oldOfferId !== newOfferId) S.note = null;
     S.state.driver = view || false;
     if (view && view.offer && typeof view.offer.secondsLeft === 'number') {
       S.offerBase = Date.now(); S.offerSec = view.offer.secondsLeft;
@@ -132,7 +139,7 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
     return noteHtml() +
       '<div class="card"><h3>What do you need</h3>' + kinds + '<div class="dim">' + esc(explain) + '</div></div>' +
       '<div class="card"><h3>Vehicle</h3>' + vehicle + '<button class="btn" id="scan">Scan for a vehicle</button></div>' +
-      '<div class="card"><h3>Fee</h3><div class="big">' + esc(money(fee)) + '</div>' +
+      '<div class="card"><h3>Fee</h3><div class="big mono">' + esc(money(fee)) + '</div>' +
       '<button class="btn pri" id="send"' + (scan && !S.busy ? '' : ' disabled') + '>Request tow</button></div>';
   }
 
@@ -167,7 +174,7 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
       '<span>Picked up at</span><span>' + esc(view.location || 'Unknown') + '</span>';
     if (view.driverName) rows += '<span>Driver</span><span>' + esc(view.driverName) + '</span>';
     if (view.destination) rows += '<span>Going to</span><span>' + esc(view.destination) + '</span>';
-    rows += '<span>Fee</span><span>' + esc(money(view.fee)) + (view.feeDue ? ' (due when you collect it)' : '') + '</span></div>';
+    rows += '<span>Fee</span><span class="mono">' + esc(money(view.fee)) + (view.feeDue ? ' (due when you collect it)' : '') + '</span></div>';
 
     var action = '';
     if (view.status === 'queued') action = '<button class="btn bad" id="cancel"' + (S.busy ? ' disabled' : '') + '>Cancel request</button>';
@@ -232,9 +239,11 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
     return post('getState').then(function (state) {
       if (!state) return;
       var first = !S.state;
+      var prevStatus = S.state && S.state.request && S.state.request.status;
+      var prevOfferId = S.state && S.state.driver && S.state.driver.offer && S.state.driver.offer.id;
       S.state = state;
-      setRequest(state.request);
-      setDriver(state.driver);
+      setRequest(state.request, prevStatus);
+      setDriver(state.driver, prevOfferId);
       if (first && !state.request) return scan();
       render();
     });
@@ -249,7 +258,17 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
     if (t.dataset.kind) { S.kind = t.dataset.kind; render(); return; }
     if (t.id === 'scan') { say(); scan(); return; }
     if (t.id === 'again') { say(); S.state.request = false; scan(); return; }
-    if (t.id === 'gps') { var c = S.state.driver.job.coords; post('gps', { x: c.x, y: c.y }); say('ok', 'GPS set.'); render(); return; }
+    if (t.id === 'gps') {
+      var c = S.state.driver.job.coords;
+      S.busy = true; say(); render();
+      post('gps', { x: c.x, y: c.y }).then(function (r) {
+        S.busy = false;
+        if (r && r.ok === true) say('ok', 'GPS set.');
+        else say('bad', 'Could not set the GPS. Try again.');
+        return refresh();
+      }).then(render);
+      return;
+    }
     var call = null;
     if (t.id === 'send') call = post('requestTow', { kind: S.kind });
     if (t.id === 'cancel') call = post('cancelRequest');
