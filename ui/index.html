@@ -1,1 +1,299 @@
-<!-- ui/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>City Services</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--cd-night:#0c0e16;--cd-deep:#111522;--cd-panel:#171d2e;--cd-raised:#1f263c;--cd-border:#27304c;--cd-ink:#f4f1ea;--cd-dim:#aeb6d2;--cd-sun:#ff7a45;--cd-sun2:#ffab6b;--cd-sea:#4ec9b0;--cd-cool:#5bc8e8;--cd-ok:#4ec98a;--cd-warn:#ffb347;--cd-bad:#ff6b6b;--cd-dim2:#7c85a3;--cd-muted:#6f789a;--cd-edge:#3a4568;--cd-lift:#252d47;--mono:"Roboto Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--cd-night);color:var(--cd-ink);font:14px/1.45 Roboto,system-ui,sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none !important}
+header{padding:18px 16px 10px;border-bottom:1px solid var(--cd-border);background:var(--cd-deep)}
+.t{font:700 13px/1 Orbitron,sans-serif;letter-spacing:2px;color:var(--cd-sun)}
+.sub{margin-top:6px;font-size:12px;color:var(--cd-dim)}
+.chips{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--cd-border);background:var(--cd-deep)}
+.chip{font:500 11px/1 Roboto,sans-serif;text-transform:uppercase;letter-spacing:1px;color:var(--cd-dim);background:transparent;border:1.5px solid var(--cd-border);border-radius:999px;padding:7px 12px}
+.chip:hover{border-color:var(--cd-edge);color:var(--cd-ink)}
+.chip.on{background:rgba(255,122,69,.22);border-color:var(--cd-sun);color:var(--cd-ink)}
+main{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--cd-panel);border:1px solid var(--cd-border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font:11px/1.2 Roboto,sans-serif;text-transform:uppercase;letter-spacing:1px;color:var(--cd-dim)}
+.big{font:700 18px/1.3 Orbitron,sans-serif;color:var(--cd-ink)}
+.line{font-size:15px}
+.dim{color:var(--cd-dim)}
+.mono{font:13px var(--mono);color:var(--cd-dim)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv span:nth-child(odd){color:var(--cd-dim)}
+.btn{display:block;width:100%;padding:12px;border-radius:8px;border:1px solid var(--cd-border);background:var(--cd-raised);color:var(--cd-ink);font:500 14px Roboto,sans-serif;text-align:center}
+.btn:hover{border-color:var(--cd-edge);background:var(--cd-lift)}
+.btn.pri{background:var(--cd-sun);border-color:var(--cd-sun);color:var(--cd-night);font-weight:700}
+.btn.pri:hover{background:var(--cd-sun2);border-color:var(--cd-sun2)}
+.btn.bad{border-color:rgba(255,107,107,.5);color:var(--cd-bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.steps li{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:center;padding:7px 0;color:var(--cd-dim2);border-left:2px solid transparent}
+.steps li::before{content:"";width:12px;height:12px;border-radius:50%;border:2px solid var(--cd-edge);justify-self:center}
+.steps li.done{color:var(--cd-dim)}
+.steps li.done::before{background:var(--cd-ok);border-color:var(--cd-ok)}
+.steps li.now{color:var(--cd-ink);font-weight:500}
+.steps li.now::before{background:var(--cd-sun);border-color:var(--cd-sun);box-shadow:0 0 0 4px rgba(255,122,69,.22)}
+.note{border-left:3px solid var(--cd-sun);background:var(--cd-raised);border-radius:8px;padding:10px 12px;font-size:13px}
+.note.bad{border-left-color:var(--cd-bad)}
+.note.ok{border-left-color:var(--cd-ok)}
+.shot{margin:0;border:1px solid var(--cd-border);border-radius:10px;overflow:hidden;background:var(--cd-deep);aspect-ratio:16/9;max-width:100%}
+.shot img{display:block;width:100%;height:100%;object-fit:contain}
+button:focus-visible{outline:2px solid var(--cd-cool);outline-offset:1px}
+body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="t">CITY SERVICES</div>
+  <div class="sub" id="who">Del Perro Sands</div>
+</header>
+<div class="chips" id="tabs" hidden>
+  <button class="chip on" id="tab-request" data-tab="request">Request</button>
+  <button class="chip" id="tab-driver" data-tab="driver">Driver</button>
+</div>
+<main id="main"></main>
+<script>
+(function () {
+  // The page runs inside the phone's or tablet's frame, so GetParentResourceName()
+  // would answer lb-phone or lb-tablet. The address is written out on purpose.
+  var BASE = 'https://dps-services/';
+  var STEPS = [['queued', 'In line'], ['accepted', 'Driver on the way'], ['arrived', 'Arrived'], ['hooked', 'On the truck'], ['delivered', 'Delivered']];
+  var S = { state: null, tab: 'request', kind: 'repair', scan: null, note: null, busy: false, etaBase: 0, etaSec: null, offerBase: 0, offerSec: null };
+
+  function post(name, body) {
+    return fetch(BASE + name, { method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json(); }).catch(function () { return null; });
+  }
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function shot(url, label) {
+    if (typeof url !== 'string') return '';
+    if (url.indexOf('https://') !== 0 && url.indexOf('nui://') !== 0) return '';
+    return '<div class="shot"><img src="' + esc(url) + '" alt="' + esc(label || 'Vehicle') +
+      '" loading="lazy" onerror="this.parentNode.hidden=true"></div>';
+  }
+  function $(id) { return document.getElementById(id); }
+  function money(n) { return '$' + Number(n || 0).toLocaleString('en-US'); }
+  function minutes(sec) { return sec > 0 ? Math.ceil(sec / 60) : 0; }
+
+  function setRequest(view) {
+    if (!S.state) return;
+    S.state.request = view || false;
+    if (view && view.status === 'accepted' && typeof view.etaSeconds === 'number') {
+      S.etaBase = Date.now(); S.etaSec = view.etaSeconds;
+    } else { S.etaSec = null; }
+  }
+  function setDriver(view) {
+    if (!S.state) return;
+    S.state.driver = view || false;
+    if (view && view.offer && typeof view.offer.secondsLeft === 'number') {
+      S.offerBase = Date.now(); S.offerSec = view.offer.secondsLeft;
+    } else { S.offerSec = null; }
+  }
+  function left(base, sec) {
+    if (sec == null) return null;
+    var v = Math.round(sec - (Date.now() - base) / 1000);
+    return v > 0 ? v : 0;
+  }
+
+  function noteHtml() {
+    if (!S.note) return '';
+    return '<div class="note ' + esc(S.note.kind) + '">' + esc(S.note.text) + '</div>';
+  }
+
+  function requestForm() {
+    var me = S.state.me, fees = S.state.fees || {};
+    var scan = S.scan;
+    var vehicle = scan
+      ? shot(scan.photo, scan.model) + '<div class="kv"><span>Vehicle</span><span>' + esc(scan.model) + '</span><span>Plate</span><span class="mono">' + esc(scan.plate) + '</span><span>Where</span><span>' + esc(scan.location) + '</span></div>'
+      : '<div class="dim">No vehicle found next to you. Stand beside the vehicle, then press Scan.</div>';
+    var kinds = '<div class="chips" style="padding:0;border:0;background:transparent">' +
+      '<button class="chip' + (S.kind === 'repair' ? ' on' : '') + '" data-kind="repair">Repair tow</button>' +
+      (me.canImpound ? '<button class="chip' + (S.kind === 'impound' ? ' on' : '') + '" data-kind="impound">Impound tow</button>' : '') +
+      '</div>';
+    var fee = S.kind === 'impound' ? fees.impound : fees.repair;
+    var explain = S.kind === 'impound'
+      ? 'The vehicle goes to the nearest impound lot. No fee for emergency services.'
+      : 'The vehicle goes to the nearest repair shop. The fee is taken when it is on the truck.';
+    return noteHtml() +
+      '<div class="card"><h3>What do you need</h3>' + kinds + '<div class="dim">' + esc(explain) + '</div></div>' +
+      '<div class="card"><h3>Vehicle</h3>' + vehicle + '<button class="btn" id="scan">Scan for a vehicle</button></div>' +
+      '<div class="card"><h3>Fee</h3><div class="big">' + esc(money(fee)) + '</div>' +
+      '<button class="btn pri" id="send"' + (scan && !S.busy ? '' : ' disabled') + '>Request tow</button></div>';
+  }
+
+  function requestStatus(view) {
+    var index = 0;
+    for (var i = 0; i < STEPS.length; i++) if (STEPS[i][0] === view.status) index = i;
+    var cancelled = view.status === 'cancelled';
+    var reasonText = { vehicle_gone: 'Cancelled: the vehicle was no longer there', vehicle_occupied: 'Cancelled: someone was in the vehicle', no_destination: 'Cancelled: no yard could take the vehicle' };
+    var headline;
+    if (cancelled) headline = reasonText[view.reason] || 'Request cancelled';
+    else if (view.status === 'queued') headline = view.position ? 'You are number ' + view.position + ' in line' : 'Finding a driver';
+    else if (view.status === 'accepted') {
+      var m = minutes(left(S.etaBase, S.etaSec));
+      headline = (view.driverName || 'A driver') + (m > 0 ? ' is about ' + m + ' min away' : ' is on the way');
+    } else if (view.status === 'arrived') headline = (view.driverName || 'The driver') + ' has arrived';
+    else if (view.status === 'hooked') headline = 'Your vehicle is on the truck';
+    else headline = 'Delivered';
+
+    var steps = '';
+    if (!cancelled) {
+      steps = '<ul class="steps">';
+      for (var k = 0; k < STEPS.length; k++) {
+        var cls = k < index ? 'done' : (k === index ? (view.status === 'delivered' ? 'done' : 'now') : '');
+        steps += '<li class="' + cls + '">' + esc(STEPS[k][1]) + '</li>';
+      }
+      steps += '</ul>';
+    }
+    var nothingCharged = cancelled && reasonText[view.reason] ? '<div class="dim">Nothing was charged.</div>' : '';
+    var rows = shot(view.photo, view.model) +
+      '<div class="kv"><span>Vehicle</span><span>' + esc(view.model || 'Vehicle') + '</span>' +
+      '<span>Plate</span><span class="mono">' + esc(view.plate || '') + '</span>' +
+      '<span>Picked up at</span><span>' + esc(view.location || 'Unknown') + '</span>';
+    if (view.driverName) rows += '<span>Driver</span><span>' + esc(view.driverName) + '</span>';
+    if (view.destination) rows += '<span>Going to</span><span>' + esc(view.destination) + '</span>';
+    rows += '<span>Fee</span><span>' + esc(money(view.fee)) + (view.feeDue ? ' (due when you collect it)' : '') + '</span></div>';
+
+    var action = '';
+    if (view.status === 'queued') action = '<button class="btn bad" id="cancel"' + (S.busy ? ' disabled' : '') + '>Cancel request</button>';
+    if (view.status === 'delivered' || cancelled) action = '<button class="btn" id="again">Done</button>';
+
+    return noteHtml() +
+      '<div class="card"><h3>' + esc(view.kind === 'impound' ? 'Impound tow' : 'Repair tow') + '</h3><div class="big" id="headline">' + esc(headline) + '</div>' + nothingCharged + steps + '</div>' +
+      '<div class="card"><h3>Details</h3>' + rows + action + '</div>';
+  }
+
+  function driverView(view) {
+    var html = noteHtml();
+    if (!view.onDuty) {
+      return html + '<div class="card"><h3>Driver</h3><div class="line">You are off duty.</div><div class="dim">Clock in at a tow depot to receive requests.</div></div>';
+    }
+    if (view.offer) {
+      var o = view.offer;
+      var title = o.kind === 'impound' ? 'Impound tow' : (o.kind === 'repair' ? 'Repair tow' : (o.type === 'predatory' ? 'Illegal parking' : 'Breakdown'));
+      html += '<div class="card"><h3>New request</h3><div class="big">' + esc(title) + '</div>' +
+        shot(o.photo, o.vehicleModel) +
+        '<div class="kv"><span>Vehicle</span><span>' + esc(o.vehicleModel || 'Vehicle') + '</span><span>Plate</span><span class="mono">' + esc(o.vehiclePlate || '') + '</span><span>Where</span><span>' + esc(o.zone || 'Unknown') + '</span>' +
+        '<span>Time left</span><span id="offerleft">' + esc(left(S.offerBase, S.offerSec)) + ' s</span></div>' +
+        '<div class="row2"><button class="btn pri" id="accept"' + (S.busy ? ' disabled' : '') + '>Accept</button><button class="btn" id="decline"' + (S.busy ? ' disabled' : '') + '>Decline</button></div>' +
+        '<div class="dim">Declining has no penalty.</div></div>';
+    }
+    if (view.job) {
+      var j = view.job;
+      var states = { assigned: 'Accepted', en_route: 'On the way', on_scene: 'At the vehicle', towing: 'Towing', completed: 'Delivered' };
+      html += '<div class="card"><h3>Current job</h3><div class="big">' + esc(states[j.state] || 'In progress') + '</div>' +
+        shot(j.photo, j.vehicleModel) +
+        '<div class="kv"><span>Vehicle</span><span>' + esc(j.vehicleModel || 'Vehicle') + '</span><span>Plate</span><span class="mono">' + esc(j.vehiclePlate || '') + '</span><span>Picked up at</span><span>' + esc(j.zone || 'Unknown') + '</span>' +
+        (j.destination ? '<span>Deliver to</span><span>' + esc(j.destination) + '</span>' : '') + '</div>' +
+        (j.coords ? '<button class="btn" id="gps">Set GPS</button>' : '') + '</div>';
+    }
+    if (!view.offer && !view.job) {
+      html += '<div class="card"><h3>Driver</h3><div class="line">On duty. No request right now.</div><div class="dim">New requests appear here and as a menu on screen.</div></div>';
+    }
+    return html;
+  }
+
+  function render() {
+    var main = $('main');
+    if (!S.state) { main.innerHTML = '<div class="card"><div class="dim">Loading.</div></div>'; return; }
+    if (!S.state.available) {
+      $('tabs').hidden = true;
+      main.innerHTML = '<div class="note bad">Tow dispatch is offline right now. Try again in a few minutes.</div>';
+      return;
+    }
+    $('who').textContent = S.state.me.name || 'Del Perro Sands';
+    var driver = S.state.me.isTowDriver && S.state.driver;
+    $('tabs').hidden = !driver;
+    if (!driver && S.tab === 'driver') S.tab = 'request';
+    $('tab-request').classList.toggle('on', S.tab === 'request');
+    $('tab-driver').classList.toggle('on', S.tab === 'driver');
+    if (S.tab === 'driver') main.innerHTML = driverView(S.state.driver);
+    else main.innerHTML = S.state.request ? requestStatus(S.state.request) : requestForm();
+  }
+
+  function say(kind, text) { S.note = text ? { kind: kind, text: text } : null; }
+
+  function refresh() {
+    return post('getState').then(function (state) {
+      if (!state) return;
+      var first = !S.state;
+      S.state = state;
+      setRequest(state.request);
+      setDriver(state.driver);
+      if (first && !state.request) return scan();
+      render();
+    });
+  }
+  function scan() {
+    return post('scan').then(function (r) { S.scan = r && r.vehicle ? r.vehicle : null; render(); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button'); if (!t || S.busy) return;
+    if (t.dataset.tab) { S.tab = t.dataset.tab; say(); render(); return; }
+    if (t.dataset.kind) { S.kind = t.dataset.kind; render(); return; }
+    if (t.id === 'scan') { say(); scan(); return; }
+    if (t.id === 'again') { say(); S.state.request = false; scan(); return; }
+    if (t.id === 'gps') { var c = S.state.driver.job.coords; post('gps', { x: c.x, y: c.y }); say('ok', 'GPS set.'); render(); return; }
+    var call = null;
+    if (t.id === 'send') call = post('requestTow', { kind: S.kind });
+    if (t.id === 'cancel') call = post('cancelRequest');
+    if (t.id === 'accept') call = post('driverAnswer', { jobId: S.state.driver.offer.id, accept: true });
+    if (t.id === 'decline') call = post('driverAnswer', { jobId: S.state.driver.offer.id, accept: false });
+    if (!call) return;
+    S.busy = true; say(); render();
+    call.then(function (r) {
+      S.busy = false;
+      if (!r) say('bad', 'No answer from the server. Try again in a moment.');
+      else if (!r.ok) say('bad', r.message || 'That did not work. Try again in a moment.');
+      else if (r.request) setRequest(r.request);
+      return refresh();
+    }).then(render);
+  });
+
+  // Updates pushed by the server arrive as window messages from the device frame.
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.action !== 'push' || !d.data || !S.state) return;
+    if (d.data.topic === 'request') setRequest(d.data.data);
+    if (d.data.topic === 'driver') setDriver(d.data.data);
+    render();
+  });
+
+  // One timer for the two countdowns on screen. It only touches text that is
+  // already drawn; nothing is fetched here. Each countdown stops mattering on
+  // its own once the card that shows it is replaced: the ETA line is redrawn
+  // by render() and the offer line only updates when #offerleft still exists.
+  setInterval(function () {
+    if (!S.state) return;
+    if (S.tab === 'request' && S.state.request && S.state.request.status === 'accepted' && S.etaSec != null) render();
+    var el = $('offerleft'); if (el && S.offerSec != null) el.textContent = left(S.offerBase, S.offerSec) + ' s';
+  }, 5000);
+
+  // The tablet only keeps this page alive while the app is open, and a push
+  // sent while it was closed is lost. Ask for the state on every load, again
+  // every 20 seconds in case a push was missed, and whenever the page becomes
+  // visible again (the device frame can hide it without unloading it).
+  render();
+  refresh();
+  setInterval(refresh, 20000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+})();
+</script>
+</body>
+</html>
