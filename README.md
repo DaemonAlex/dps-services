@@ -66,6 +66,12 @@ Add to `Config.CustomApps` in `lb-tablet/config/config.lua`:
   for its state every time it loads.
 - Never use `backdrop-filter`. The game's browser paints it as a black square.
 
+## Server console
+
+| Command | Description |
+|---|---|
+| `servicesdebug` | One line proving the app can reach the tow script: the tow resource name, its state, the repair and impound fees and the scan range. Refuses any caller but the console. |
+
 ## Tests
 
     lua5.4 tests/run.lua

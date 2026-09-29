@@ -112,6 +112,17 @@ T.test('a cancelled request tells the truth about the fee', function()
         'Cancelled: someone was in the vehicle.')
 end)
 
+T.test('a requester who cancels after the vehicle was hooked is told the fee came back', function()
+    -- hooked (the fee left the bank), put back in line, then cancelled by the requester
+    T.eq(S.statusText({ status = 'cancelled', reason = 'requester', fee = 200, refund = 'refunded' }).line,
+        'Request cancelled. Your $200 was paid back.')
+    T.eq(S.statusText({ status = 'cancelled', reason = 'requester', fee = 200, refund = 'owed' }).line,
+        'Request cancelled. Your $200 will be paid back when you next open the app.')
+    -- cancelled before the hook: nothing ever left the bank
+    T.eq(S.statusText({ status = 'cancelled', reason = 'requester', fee = 200 }).line,
+        'Request cancelled. Nothing was charged.')
+end)
+
 T.test('pickPhoto: our own image or nil', function()
     T.eq(S.pickPhoto({ image = 'https://a/x.webp', fallbacks = { 'https://b/y.webp' } }), 'https://a/x.webp')
     T.eq(S.pickPhoto({ fallbacks = { 'https://b/y.webp', 'https://c/z.png' } }), nil)
