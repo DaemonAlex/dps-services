@@ -20,6 +20,7 @@ function Services.cleanRequest(kind, scan)
     if type(scan) ~= 'table' then return false, 'no_vehicle' end
     local plate = trim(scan.plate)
     if #plate == 0 then return false, 'no_vehicle' end
+    if type(scan.netId) ~= 'number' then return false, 'no_vehicle' end
     local c = scan.coords
     if type(c) ~= 'table' or type(c.x) ~= 'number' or type(c.y) ~= 'number' or type(c.z) ~= 'number' then
         return false, 'bad_coords'

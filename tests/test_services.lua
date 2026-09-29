@@ -18,8 +18,15 @@ T.test('cleanRequest refuses a bad kind, a missing vehicle and bad coordinates',
     T.falsy(ok); T.eq(reason, 'no_vehicle')
     ok, reason = S.cleanRequest('repair', { plate = '', coords = { x = 1, y = 2, z = 3 } })
     T.falsy(ok); T.eq(reason, 'no_vehicle')
-    ok, reason = S.cleanRequest('repair', { plate = 'ABC', coords = { x = 1, y = 'two', z = 3 } })
+    ok, reason = S.cleanRequest('repair', { netId = 12, plate = 'ABC', coords = { x = 1, y = 'two', z = 3 } })
     T.falsy(ok); T.eq(reason, 'bad_coords')
+end)
+
+T.test('cleanRequest requires a numeric netId', function()
+    local ok, reason = S.cleanRequest('repair', { plate = 'ABC', coords = { x = 1, y = 2, z = 3 } })
+    T.falsy(ok); T.eq(reason, 'no_vehicle')
+    ok, reason = S.cleanRequest('repair', { netId = 'abc', plate = 'ABC', coords = { x = 1, y = 2, z = 3 } })
+    T.falsy(ok); T.eq(reason, 'no_vehicle')
 end)
 
 T.test('minutes rounds up and never shows zero while time is left', function()
