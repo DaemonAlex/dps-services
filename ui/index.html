@@ -90,6 +90,16 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
   function $(id) { return document.getElementById(id); }
   function money(n) { return '$' + Number(n || 0).toLocaleString('en-US'); }
   function minutes(sec) { return sec > 0 ? Math.ceil(sec / 60) : 0; }
+  // Same rule as Services.feeLine on the server: "Nothing was charged." is
+  // only ever shown when nothing was.
+  function feeLine(view) {
+    var fee = view.fee || 0;
+    if (fee <= 0) return null;
+    if (view.refund === 'refunded') return 'Your ' + money(fee) + ' was paid back.';
+    if (view.refund === 'owed') return 'Your ' + money(fee) + ' will be paid back when you next open the app.';
+    if (view.feeCharged === true) return null;
+    return 'Nothing was charged.';
+  }
 
   function setRequest(view, prevStatus) {
     if (!S.state) return;
@@ -167,7 +177,8 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
       }
       steps += '</ul>';
     }
-    var nothingCharged = cancelled && reasonText[view.reason] ? '<div class="dim">Nothing was charged.</div>' : '';
+    var feeNote = cancelled ? feeLine(view) : null;
+    var nothingCharged = feeNote ? '<div class="dim">' + esc(feeNote) + '</div>' : '';
     var rows = shot(view.photo, view.model) +
       '<div class="kv"><span>Vehicle</span><span>' + esc(view.model || 'Vehicle') + '</span>' +
       '<span>Plate</span><span class="mono">' + esc(view.plate || '') + '</span>' +

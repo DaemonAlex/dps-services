@@ -41,11 +41,23 @@ function Services.minutes(seconds)
 end
 
 local CANCEL_REASONS = {
-    vehicle_gone = 'Cancelled: the vehicle was no longer there. Nothing was charged.',
-    vehicle_occupied = 'Cancelled: someone was in the vehicle. Nothing was charged.',
-    no_destination = 'Cancelled: no yard could take the vehicle. Nothing was charged.',
+    vehicle_gone = 'Cancelled: the vehicle was no longer there.',
+    vehicle_occupied = 'Cancelled: someone was in the vehicle.',
+    no_destination = 'Cancelled: no yard could take the vehicle.',
     requester = 'Request cancelled.',
 }
+
+--- What happened to the money on a cancelled request. nil when there is
+--- nothing to say. "Nothing was charged." is only ever said when nothing was.
+function Services.feeLine(view)
+    if type(view) ~= 'table' then return nil end
+    local fee = view.fee or 0
+    if fee <= 0 then return nil end
+    if view.refund == 'refunded' then return ('Your $%d was paid back.'):format(fee) end
+    if view.refund == 'owed' then return ('Your $%d will be paid back when you next open the app.'):format(fee) end
+    if view.feeCharged == true then return nil end
+    return 'Nothing was charged.'
+end
 
 function Services.statusText(view)
     local line
@@ -83,6 +95,8 @@ function Services.statusText(view)
         end
     else
         line = CANCEL_REASONS[view.reason] or 'Request cancelled.'
+        local fee = Services.feeLine(view)
+        if fee then line = line .. ' ' .. fee end
     end
     return { title = 'City Services', line = line }
 end
