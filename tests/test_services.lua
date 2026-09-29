@@ -63,3 +63,17 @@ T.test('reasonText covers every reason the tow script can return', function()
     end
     T.eq(S.reasonText('something_unknown'), 'That did not work. Try again in a moment.')
 end)
+
+T.test('reasonText covers the ownership and City Tow cancel reasons', function()
+    local pairs_ = {
+        { 'not_owner', 'A repair tow is for your own vehicle. This one is not registered to you.' },
+        { 'vehicle_gone', 'The vehicle was no longer there. Nothing was charged.' },
+        { 'vehicle_occupied', 'Someone was in the vehicle. Nothing was charged.' },
+        { 'no_destination', 'No yard could take the vehicle. Nothing was charged.' },
+    }
+    for i = 1, #pairs_ do
+        local reason, expected = pairs_[i][1], pairs_[i][2]
+        T.eq(S.reasonText(reason), expected, reason)
+        T.truthy(S.reasonText(reason) ~= S.reasonText('something_unknown'), reason .. ' has its own sentence')
+    end
+end)

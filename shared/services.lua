@@ -103,6 +103,10 @@ local REASONS = {
     expired = 'That offer ran out of time.',
     gone = 'The caller cancelled that request.',
     unavailable = 'Tow dispatch is offline right now.',
+    not_owner = 'A repair tow is for your own vehicle. This one is not registered to you.',
+    vehicle_gone = 'The vehicle was no longer there. Nothing was charged.',
+    vehicle_occupied = 'Someone was in the vehicle. Nothing was charged.',
+    no_destination = 'No yard could take the vehicle. Nothing was charged.',
 }
 
 function Services.reasonText(reason)
