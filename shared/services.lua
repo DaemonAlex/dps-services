@@ -41,7 +41,9 @@ function Services.minutes(seconds)
 end
 
 local CANCEL_REASONS = {
-    vehicle_gone = 'Cancelled: the vehicle was no longer there.',
+    vehicle_gone = 'Cancelled: the vehicle was no longer there. Nothing was charged.',
+    vehicle_occupied = 'Cancelled: someone was in the vehicle. Nothing was charged.',
+    no_destination = 'Cancelled: no yard could take the vehicle. Nothing was charged.',
     requester = 'Request cancelled.',
 }
 
@@ -104,9 +106,6 @@ local REASONS = {
     gone = 'The caller cancelled that request.',
     unavailable = 'Tow dispatch is offline right now.',
     not_owner = 'A repair tow is for your own vehicle. This one is not registered to you.',
-    vehicle_gone = 'The vehicle was no longer there. Nothing was charged.',
-    vehicle_occupied = 'Someone was in the vehicle. Nothing was charged.',
-    no_destination = 'No yard could take the vehicle. Nothing was charged.',
 }
 
 function Services.reasonText(reason)

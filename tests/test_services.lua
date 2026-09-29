@@ -47,7 +47,7 @@ T.test('statusText: one plain sentence per status', function()
     T.eq(S.statusText({ status = 'hooked', destination = 'LSPD Impound' }).line, 'Your vehicle is on the truck, heading to LSPD Impound.')
     T.eq(S.statusText({ status = 'hooked' }).line, 'Your vehicle is on the truck.')
     T.eq(S.statusText({ status = 'delivered', destination = 'LSPD Impound' }).line, 'Delivered to LSPD Impound.')
-    T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_gone' }).line, 'Cancelled: the vehicle was no longer there.')
+    T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_gone' }).line, 'Cancelled: the vehicle was no longer there. Nothing was charged.')
     T.eq(S.statusText({ status = 'cancelled' }).line, 'Request cancelled.')
     T.eq(S.statusText({ status = 'queued' }).title, 'City Services')
 end)
@@ -64,16 +64,20 @@ T.test('reasonText covers every reason the tow script can return', function()
     T.eq(S.reasonText('something_unknown'), 'That did not work. Try again in a moment.')
 end)
 
-T.test('reasonText covers the ownership and City Tow cancel reasons', function()
-    local pairs_ = {
-        { 'not_owner', 'A repair tow is for your own vehicle. This one is not registered to you.' },
-        { 'vehicle_gone', 'The vehicle was no longer there. Nothing was charged.' },
-        { 'vehicle_occupied', 'Someone was in the vehicle. Nothing was charged.' },
-        { 'no_destination', 'No yard could take the vehicle. Nothing was charged.' },
-    }
-    for i = 1, #pairs_ do
-        local reason, expected = pairs_[i][1], pairs_[i][2]
-        T.eq(S.reasonText(reason), expected, reason)
-        T.truthy(S.reasonText(reason) ~= S.reasonText('something_unknown'), reason .. ' has its own sentence')
-    end
+T.test('reasonText covers not_owner; statusText covers the City Tow cancel reasons', function()
+    T.eq(S.reasonText('not_owner'), 'A repair tow is for your own vehicle. This one is not registered to you.')
+    T.truthy(S.reasonText('not_owner') ~= S.reasonText('something_unknown'), 'not_owner has its own sentence')
+
+    local vehicleGone = S.statusText({ status = 'cancelled', reason = 'vehicle_gone' }).line
+    local vehicleOccupied = S.statusText({ status = 'cancelled', reason = 'vehicle_occupied' }).line
+    local noDestination = S.statusText({ status = 'cancelled', reason = 'no_destination' }).line
+    T.eq(vehicleGone, 'Cancelled: the vehicle was no longer there. Nothing was charged.')
+    T.eq(vehicleOccupied, 'Cancelled: someone was in the vehicle. Nothing was charged.')
+    T.eq(noDestination, 'Cancelled: no yard could take the vehicle. Nothing was charged.')
+    T.truthy(vehicleGone ~= vehicleOccupied, 'vehicle_gone differs from vehicle_occupied')
+    T.truthy(vehicleGone ~= noDestination, 'vehicle_gone differs from no_destination')
+    T.truthy(vehicleOccupied ~= noDestination, 'vehicle_occupied differs from no_destination')
+    T.truthy(vehicleGone ~= 'Request cancelled.', 'vehicle_gone differs from the plain fallback')
+    T.truthy(vehicleOccupied ~= 'Request cancelled.', 'vehicle_occupied differs from the plain fallback')
+    T.truthy(noDestination ~= 'Request cancelled.', 'no_destination differs from the plain fallback')
 end)

@@ -28,20 +28,30 @@ local function fail(reason)
     return { ok = false, reason = reason, message = Services.reasonText(reason) }
 end
 
+local function trim(text)
+    local clean = (text or ''):gsub('^%s+', '')
+    clean = clean:gsub('%s+$', '')
+    return clean
+end
+
+local function notAvailable()
+    return { available = false, me = { name = 'Citizen', canImpound = false, isTowDriver = false }, fees = false, request = false, driver = false }
+end
+
 local function stateFor(source)
     local player = exports.qbx_core:GetPlayer(source)
-    if not player then return { available = false } end
+    if not player then return notAvailable() end
     local pd = player.PlayerData
     local job = pd.job or {}
     local cfg = tow('GetRequestConfig')
-    if type(cfg) ~= 'table' then
-        return { available = false, me = { name = 'Unknown', canImpound = false, isTowDriver = false } }
-    end
+    if type(cfg) ~= 'table' then return notAvailable() end
     local charinfo = pd.charinfo or {}
+    local name = trim(trim(charinfo.firstname) .. ' ' .. trim(charinfo.lastname))
+    if name == '' then name = 'Citizen' end
     return {
         available = true,
         me = {
-            name = ((charinfo.firstname or '') .. ' ' .. (charinfo.lastname or '')),
+            name = name,
             canImpound = job.onduty == true and cfg.emergencyJobTypes[job.type] == true,
             isTowDriver = job.name == cfg.jobName,
         },
@@ -101,9 +111,10 @@ AddEventHandler('dps-towjob:requestUpdate', function(citizenid, view, changed)
     if changed then notify(source, Services.statusText(view)) end
     if not open then
         SetTimeout(15000, function()
-            if GetPlayerName(source) then
-                TriggerClientEvent('dps-services:client:push', source, 'request', tow('GetRequestStatus', source) or false)
-            end
+            local current = exports.qbx_core:GetPlayerByCitizenId(citizenid)
+            if not current then return end
+            local currentSource = current.PlayerData.source
+            TriggerClientEvent('dps-services:client:push', currentSource, 'request', tow('GetRequestStatus', currentSource) or false)
         end)
     end
 end)

@@ -32,26 +32,34 @@ end
 
 -- Register on start, and again whenever the phone restarts after us, or the
 -- icon disappears from the phone until this resource restarts too.
-CreateThread(function()
-    while GetResourceState('lb-phone') ~= 'started' do Wait(1000) end
-    Wait(2000)
-    registerPhoneApp()
-end)
+if GetResourceState('lb-phone') == 'started' then
+    SetTimeout(2000, registerPhoneApp)
+end
 
 AddEventHandler('onResourceStart', function(resource)
     if resource ~= 'lb-phone' then return end
     SetTimeout(5000, registerPhoneApp)
 end)
 
+local warnedPhone, warnedTablet = false, false
+
 --- Push into the page on whichever device has it open. SendNUIMessage cannot
 --- reach a page that lives in another resource's frame.
 local function sendApp(action, data)
-    pcall(function()
+    local phoneOk = pcall(function()
         exports['lb-phone']:SendCustomAppMessage(APP, { action = action, data = data })
     end)
-    pcall(function()
+    if not phoneOk and not warnedPhone and GetResourceState('lb-phone') == 'started' then
+        warnedPhone = true
+        print('^1[dps-services] SendCustomAppMessage (lb-phone) failed^7')
+    end
+    local tabletOk = pcall(function()
         exports['lb-tablet']:SendCustomAppMessage(APP, action, data)
     end)
+    if not tabletOk and not warnedTablet and GetResourceState('lb-tablet') == 'started' then
+        warnedTablet = true
+        print('^1[dps-services] SendCustomAppMessage (lb-tablet) failed^7')
+    end
 end
 
 RegisterNetEvent('dps-services:client:push', function(topic, data)
@@ -68,9 +76,13 @@ end
 local function locationLabel(c)
     local streetHash = GetStreetNameAtCoord(c.x, c.y, c.z)
     local street = GetStreetNameFromHashKey(streetHash)
+    if street == '' or street == 'NULL' then street = nil end
     local zone = GetLabelText(GetNameOfZone(c.x, c.y, c.z))
-    if street and street ~= '' then return street .. ', ' .. zone end
-    return zone
+    if zone == '' or zone == 'NULL' then zone = nil end
+    if street and zone then return street .. ', ' .. zone end
+    if street then return street end
+    if zone then return zone end
+    return 'Unknown area'
 end
 
 --- The vehicle the player is in, or the closest one within range.
@@ -84,7 +96,8 @@ local function scanVehicle()
     local c = GetEntityCoords(vehicle)
     local plate = trim(GetVehicleNumberPlateText(vehicle))
     if plate == '' then return false end
-    local netId = NetworkGetEntityIsNetworked(vehicle) and NetworkGetNetworkIdFromEntity(vehicle) or nil
+    if not NetworkGetEntityIsNetworked(vehicle) then return false end
+    local netId = NetworkGetNetworkIdFromEntity(vehicle)
     return {
         netId = netId,
         plate = plate,
@@ -94,8 +107,14 @@ local function scanVehicle()
     }
 end
 
+local function ask(name, fallback, ...)
+    local ok, result = pcall(lib.callback.await, name, false, ...)
+    if ok and result then return result end
+    return fallback
+end
+
 RegisterNUICallback('getState', function(_, cb)
-    cb(lib.callback.await('dps-services:getState', false) or { available = false })
+    cb(ask('dps-services:getState', { available = false }))
 end)
 
 RegisterNUICallback('scan', function(_, cb)
@@ -108,18 +127,15 @@ RegisterNUICallback('requestTow', function(data, cb)
         cb({ ok = false, reason = 'no_vehicle', message = Services.reasonText('no_vehicle') })
         return
     end
-    cb(lib.callback.await('dps-services:requestTow', false, data and data.kind, scan)
-        or { ok = false, message = Services.reasonText('unavailable') })
+    cb(ask('dps-services:requestTow', { ok = false, message = Services.reasonText('unavailable') }, data and data.kind, scan))
 end)
 
 RegisterNUICallback('cancelRequest', function(_, cb)
-    cb(lib.callback.await('dps-services:cancelRequest', false)
-        or { ok = false, message = Services.reasonText('unavailable') })
+    cb(ask('dps-services:cancelRequest', { ok = false, message = Services.reasonText('unavailable') }))
 end)
 
 RegisterNUICallback('driverAnswer', function(data, cb)
-    cb(lib.callback.await('dps-services:driverAnswer', false, data and data.jobId, data and data.accept == true)
-        or { ok = false, message = Services.reasonText('unavailable') })
+    cb(ask('dps-services:driverAnswer', { ok = false, message = Services.reasonText('unavailable') }, data and data.jobId, data and data.accept == true))
 end)
 
 RegisterNUICallback('gps', function(data, cb)
