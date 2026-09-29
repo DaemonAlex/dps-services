@@ -84,7 +84,7 @@ end)
 
 T.test('pickPhoto: the image, then the first usable fallback, then nil', function()
     T.eq(S.pickPhoto({ image = 'https://a/x.webp', fallbacks = { 'https://b/y.webp' } }), 'https://a/x.webp')
-    T.eq(S.pickPhoto({ fallbacks = { 'https://b/y.webp', 'https://c/z.png' } }), 'https://b/y.webp')
+    T.eq(S.pickPhoto({ fallbacks = { 'https://b/y.webp', 'https://c/z.png' } }), nil)
     T.eq(S.pickPhoto({ image = '', fallbacks = {} }), nil)
     T.eq(S.pickPhoto(nil), nil)
     T.eq(S.pickPhoto('text'), nil)

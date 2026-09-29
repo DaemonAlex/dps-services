@@ -117,15 +117,12 @@ local function goodAddress(value)
     return value:sub(1, 8) == 'https://' or value:sub(1, 6) == 'nui://'
 end
 
---- First usable picture address from a jg-vehiclestudio entry, or nil.
+--- Our own picture for the vehicle, or nil. The vendor's fallbacks are
+--- untested guesses (dead links for add-on cars), so only the stored image
+--- is used.
 function Services.pickPhoto(entry)
     if type(entry) ~= 'table' then return nil end
     if goodAddress(entry.image) then return entry.image end
-    if type(entry.fallbacks) == 'table' then
-        for i = 1, #entry.fallbacks do
-            if goodAddress(entry.fallbacks[i]) then return entry.fallbacks[i] end
-        end
-    end
     return nil
 end
 

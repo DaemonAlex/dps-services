@@ -32,9 +32,15 @@ end
 
 -- Register on start, and again whenever the phone restarts after us, or the
 -- icon disappears from the phone until this resource restarts too.
-if GetResourceState('lb-phone') == 'started' then
-    SetTimeout(2000, registerPhoneApp)
+local function registerWhenReady(triesLeft)
+    local state = GetResourceState('lb-phone')
+    if state == 'started' then
+        registerPhoneApp()
+    elseif state == 'starting' and triesLeft > 0 then
+        SetTimeout(3000, function() registerWhenReady(triesLeft - 1) end)
+    end
 end
+SetTimeout(2000, function() registerWhenReady(5) end)
 
 AddEventHandler('onResourceStart', function(resource)
     if resource ~= 'lb-phone' then return end
@@ -120,7 +126,7 @@ end)
 RegisterNUICallback('scan', function(_, cb)
     local vehicle = scanVehicle()
     if vehicle and type(vehicle.netId) == 'number' then
-        local info = lib.callback.await('dps-services:vehicleInfo', false, vehicle.netId)
+        local info = ask('dps-services:vehicleInfo', false, vehicle.netId)
         if info then
             vehicle.photo = info.photo or nil
             if info.label then vehicle.model = info.label end

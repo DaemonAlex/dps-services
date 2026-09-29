@@ -33,16 +33,15 @@ local PHOTOS = {} -- spawn code -> address or false, kept for this server run
 local function photoFor(code)
     if type(code) ~= 'string' or code == '' then return nil end
     if PHOTOS[code] ~= nil then return PHOTOS[code] or nil end
+    if GetResourceState('jg-vehiclestudio') ~= 'started' then return nil end
     local found = false
-    if GetResourceState('jg-vehiclestudio') == 'started' then
-        local ok, images = pcall(function()
-            return exports['jg-vehiclestudio']:getImages({ code }, 'default')
-        end)
-        if ok and type(images) == 'table' then
-            found = Services.pickPhoto(images[code]) or false
-        end
+    local ok, images = pcall(function()
+        return exports['jg-vehiclestudio']:getImages({ code }, 'default')
+    end)
+    if ok and type(images) == 'table' then
+        found = Services.pickPhoto(images[code]) or false
+        PHOTOS[code] = found
     end
-    PHOTOS[code] = found
     return found or nil
 end
 
@@ -74,13 +73,14 @@ local function withDriverPhotos(view)
 end
 
 local function trim(text)
-    local clean = (text or ''):gsub('^%s+', '')
+    if type(text) ~= 'string' then return '' end
+    local clean = text:gsub('^%s+', '')
     clean = clean:gsub('%s+$', '')
     return clean
 end
 
-local function notAvailable()
-    return { available = false, me = { name = 'Citizen', canImpound = false, isTowDriver = false }, fees = false, request = false, driver = false }
+local function notAvailable(name)
+    return { available = false, me = { name = name or 'Citizen', canImpound = false, isTowDriver = false }, fees = false, request = false, driver = false }
 end
 
 local function stateFor(source)
@@ -88,11 +88,11 @@ local function stateFor(source)
     if not player then return notAvailable() end
     local pd = player.PlayerData
     local job = pd.job or {}
-    local cfg = tow('GetRequestConfig')
-    if type(cfg) ~= 'table' then return notAvailable() end
     local charinfo = pd.charinfo or {}
     local name = trim(trim(charinfo.firstname) .. ' ' .. trim(charinfo.lastname))
     if name == '' then name = 'Citizen' end
+    local cfg = tow('GetRequestConfig')
+    if type(cfg) ~= 'table' then return notAvailable(name) end
     return {
         available = true,
         me = {
