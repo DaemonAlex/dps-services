@@ -189,7 +189,7 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
     rows += '<span>Fee</span><span class="mono">' + esc(money(view.fee)) + (view.feeDue ? ' (due when you collect it)' : '') + '</span></div>';
 
     var action = '';
-    if (view.status === 'queued') action = '<button class="btn bad" id="cancel"' + (S.busy ? ' disabled' : '') + '>Cancel request</button>';
+    if (view.status === 'queued' || view.status === 'accepted') action = '<button class="btn bad" id="cancel"' + (S.busy ? ' disabled' : '') + '>Cancel request</button>';
     if (view.status === 'delivered' || cancelled) action = '<button class="btn" id="again">Done</button>';
 
     return noteHtml() +
