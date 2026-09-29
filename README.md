@@ -18,6 +18,12 @@ This resource forwards a request and shows what comes back.
 If no tow driver is on duty, or nobody accepts within three minutes, City Tow
 takes the request.
 
+A request can be called off while it is in line or while the driver is on the
+way. Once the driver has reached the vehicle it is too late. The fee is only
+taken when the vehicle is hooked, and it is given back if the tow then does not
+happen; the app says which. A finished request stays on screen until Done is
+pressed, so the place the vehicle went can be read.
+
 ## How it connects
 
     page --fetch--> client/main.lua --lib.callback--> server/main.lua --export--> dps-towjob
@@ -27,10 +33,12 @@ takes the request.
 
 | | |
 |---|---|
-| `ox_lib` | callbacks, vehicle lookup |
+| `ox_lib` | callbacks, closest-vehicle lookup |
+| `qbx_core` | the player, their job, and the vehicle registry the model name comes from |
 | `lb-phone` | hosts the app on the phone |
 | `lb-tablet` | hosts the app on the tablet, through one entry in its `Config.CustomApps` |
-| `dps-towjob` 2.9.0 or newer | the queue; a soft dependency |
+| `dps-towjob` 2.9.0 or newer | the queue; a soft dependency, checked at every call |
+| `jg-vehiclestudio` | optional: the vehicle photo on the scan and status cards. Without it the cards show no picture. |
 
 ## Tablet entry
 
