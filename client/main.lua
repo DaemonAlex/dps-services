@@ -73,6 +73,13 @@ RegisterNetEvent('dps-services:client:push', function(topic, data)
     sendApp('push', { topic = topic, data = data or false })
 end)
 
+-- Whatever the page is holding belongs to the character who was logged in. On a
+-- logout or character switch it is cleared, so the next character never sees the
+-- previous one's tow. qbx_core fires this compat event on every logout.
+RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
+    sendApp('reset', false)
+end)
+
 local function trim(text)
     local clean = (text or ''):gsub('^%s+', '')
     clean = clean:gsub('%s+$', '')

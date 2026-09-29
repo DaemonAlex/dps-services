@@ -101,8 +101,14 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
     return 'Nothing was charged.';
   }
 
+  function finished(view) { return !!view && (view.status === 'delivered' || view.status === 'cancelled'); }
+
   function setRequest(view, prevStatus) {
     if (!S.state) return;
+    // A finished request stays on screen until the player presses Done. The
+    // server has already forgotten it, so an update with nothing in it here
+    // means "no open request", not "the result is gone".
+    if (!view && finished(S.state.request)) return;
     var oldStatus = arguments.length > 1 ? prevStatus : (S.state.request && S.state.request.status);
     var newStatus = view && view.status;
     if (oldStatus !== newStatus) S.note = null;
@@ -190,7 +196,7 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
 
     var action = '';
     if (view.status === 'queued' || view.status === 'accepted') action = '<button class="btn bad" id="cancel"' + (S.busy ? ' disabled' : '') + '>Cancel request</button>';
-    if (view.status === 'delivered' || cancelled) action = '<button class="btn" id="again">Done</button>';
+    if (view.status === 'delivered' || cancelled) action = '<button class="btn" id="done">Done</button>';
 
     return noteHtml() +
       '<div class="card"><h3>' + esc(view.kind === 'impound' ? 'Impound tow' : 'Repair tow') + '</h3><div class="big" id="headline">' + esc(headline) + '</div>' + nothingCharged + steps + '</div>' +
@@ -253,7 +259,9 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
       var first = !S.state;
       var prevStatus = S.state && S.state.request && S.state.request.status;
       var prevOfferId = S.state && S.state.driver && S.state.driver.offer && S.state.driver.offer.id;
+      var held = S.state && finished(S.state.request) ? S.state.request : null;
       S.state = state;
+      if (held) S.state.request = held;
       setRequest(state.request, prevStatus);
       setDriver(state.driver, prevOfferId);
       if (first && !state.request) return scan();
@@ -269,7 +277,7 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
     if (t.dataset.tab) { S.tab = t.dataset.tab; say(); render(); return; }
     if (t.dataset.kind) { S.kind = t.dataset.kind; render(); return; }
     if (t.id === 'scan') { say(); scan(); return; }
-    if (t.id === 'again') { say(); S.state.request = false; scan(); return; }
+    if (t.id === 'done') { say(); S.state.request = false; scan(); return; }
     if (t.id === 'gps') {
       var c = S.state.driver.job.coords;
       S.busy = true; say(); render();
@@ -300,6 +308,13 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
   // Updates pushed by the server arrive as window messages from the device frame.
   window.addEventListener('message', function (e) {
     var d = e.data || {};
+    // The character logged out: nothing on screen belongs to the next one.
+    if (d.action === 'reset') {
+      S.state = null; S.scan = null; S.note = null; S.busy = false;
+      S.etaSec = null; S.offerSec = null; S.tab = 'request';
+      render(); refresh();
+      return;
+    }
     if (d.action !== 'push' || !d.data || !S.state) return;
     if (d.data.topic === 'request') setRequest(d.data.data);
     if (d.data.topic === 'driver') setDriver(d.data.data);

@@ -165,17 +165,11 @@ AddEventHandler('dps-towjob:requestUpdate', function(citizenid, view, changed)
     local player = exports.qbx_core:GetPlayerByCitizenId(citizenid)
     if not player then return end
     local source = player.PlayerData.source
-    local open = view.status ~= 'delivered' and view.status ~= 'cancelled'
     TriggerClientEvent('dps-services:client:push', source, 'request', withRequestPhoto(view))
     if changed then notify(source, Services.statusText(view)) end
-    if not open then
-        SetTimeout(15000, function()
-            local current = exports.qbx_core:GetPlayerByCitizenId(citizenid)
-            if not current then return end
-            local currentSource = current.PlayerData.source
-            TriggerClientEvent('dps-services:client:push', currentSource, 'request', withRequestPhoto(tow('GetRequestStatus', currentSource)) or false)
-        end)
-    end
+    -- A finished request stays on the page until the player presses Done. It
+    -- used to be swept off after 15 s, so "Delivered to X" lived only in the
+    -- notification.
 end)
 
 AddEventHandler('dps-towjob:driverUpdate', function(source)
