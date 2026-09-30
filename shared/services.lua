@@ -42,8 +42,22 @@ end
 
 local CANCEL_REASONS = {
     vehicle_gone = 'Cancelled: the vehicle was no longer there.',
+    vehicle_occupied = 'Cancelled: someone was in the vehicle.',
+    no_destination = 'Cancelled: no yard could take the vehicle.',
     requester = 'Request cancelled.',
 }
+
+--- What happened to the money on a cancelled request. nil when there is
+--- nothing to say. "Nothing was charged." is only ever said when nothing was.
+function Services.feeLine(view)
+    if type(view) ~= 'table' then return nil end
+    local fee = view.fee or 0
+    if fee <= 0 then return nil end
+    if view.refund == 'refunded' then return ('Your $%d was paid back.'):format(fee) end
+    if view.refund == 'owed' then return ('Your $%d will be paid back when you next open the app.'):format(fee) end
+    if view.feeCharged == true then return nil end
+    return 'Nothing was charged.'
+end
 
 function Services.statusText(view)
     local line
@@ -66,7 +80,11 @@ function Services.statusText(view)
             line = ('%s accepted and is on the way.'):format(driver)
         end
     elseif status == 'arrived' then
-        line = ('%s has arrived.'):format(driver)
+        if view.cityTow then
+            line = ('%s has arrived. Leave the vehicle empty.'):format(driver)
+        else
+            line = ('%s has arrived.'):format(driver)
+        end
     elseif status == 'hooked' then
         if view.destination then
             line = ('Your vehicle is on the truck, heading to %s.'):format(view.destination)
@@ -74,13 +92,19 @@ function Services.statusText(view)
             line = 'Your vehicle is on the truck.'
         end
     elseif status == 'delivered' then
-        if view.destination then
+        if view.handoff and view.kind == 'repair' then
+            line = ('Delivered. Your vehicle is in the %s.'):format(view.handoff)
+        elseif view.handoff then
+            line = ('Delivered to %s.'):format(view.handoff)
+        elseif view.destination then
             line = ('Delivered to %s.'):format(view.destination)
         else
             line = 'Your vehicle was delivered.'
         end
     else
         line = CANCEL_REASONS[view.reason] or 'Request cancelled.'
+        local fee = Services.feeLine(view)
+        if fee then line = line .. ' ' .. fee end
     end
     return { title = 'City Services', line = line }
 end
@@ -98,15 +122,31 @@ local REASONS = {
     no_funds = 'You need $200 in the bank for a repair tow.',
     queue_full = 'Tow dispatch is full right now. Try again in a few minutes.',
     no_request = 'You have no open request.',
-    too_late = 'A driver already accepted. It can no longer be cancelled here.',
+    too_late = 'The driver is already at the vehicle. It can no longer be cancelled here.',
     no_offer = 'That offer is no longer open.',
     expired = 'That offer ran out of time.',
     gone = 'The caller cancelled that request.',
     unavailable = 'Tow dispatch is offline right now.',
+    not_owner = 'A repair tow is for your own vehicle. This one is not registered to you.',
+    already_requested = 'A tow is already on the way for this vehicle.',
 }
 
 function Services.reasonText(reason)
     return REASONS[reason] or 'That did not work. Try again in a moment.'
+end
+
+local function goodAddress(value)
+    if type(value) ~= 'string' or #value == 0 or #value > 400 then return false end
+    return value:sub(1, 8) == 'https://' or value:sub(1, 6) == 'nui://'
+end
+
+--- Our own picture for the vehicle, or nil. The vendor's fallbacks are
+--- untested guesses (dead links for add-on cars), so only the stored image
+--- is used.
+function Services.pickPhoto(entry)
+    if type(entry) ~= 'table' then return nil end
+    if goodAddress(entry.image) then return entry.image end
+    return nil
 end
 
 return Services

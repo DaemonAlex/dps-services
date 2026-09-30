@@ -47,7 +47,8 @@ T.test('statusText: one plain sentence per status', function()
     T.eq(S.statusText({ status = 'hooked', destination = 'LSPD Impound' }).line, 'Your vehicle is on the truck, heading to LSPD Impound.')
     T.eq(S.statusText({ status = 'hooked' }).line, 'Your vehicle is on the truck.')
     T.eq(S.statusText({ status = 'delivered', destination = 'LSPD Impound' }).line, 'Delivered to LSPD Impound.')
-    T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_gone' }).line, 'Cancelled: the vehicle was no longer there.')
+    T.eq(S.statusText({ status = 'arrived', driverName = 'City Tow', cityTow = true }).line, 'City Tow has arrived. Leave the vehicle empty.')
+    T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_gone', fee = 200 }).line, 'Cancelled: the vehicle was no longer there. Nothing was charged.')
     T.eq(S.statusText({ status = 'cancelled' }).line, 'Request cancelled.')
     T.eq(S.statusText({ status = 'queued' }).title, 'City Services')
 end)
@@ -62,4 +63,73 @@ T.test('reasonText covers every reason the tow script can return', function()
         T.truthy(text ~= S.reasonText('something_unknown'), reasons[i] .. ' has its own sentence')
     end
     T.eq(S.reasonText('something_unknown'), 'That did not work. Try again in a moment.')
+end)
+
+T.test('reasonText covers not_owner; statusText covers the City Tow cancel reasons', function()
+    T.eq(S.reasonText('not_owner'), 'A repair tow is for your own vehicle. This one is not registered to you.')
+    T.truthy(S.reasonText('not_owner') ~= S.reasonText('something_unknown'), 'not_owner has its own sentence')
+    T.eq(S.reasonText('already_requested'), 'A tow is already on the way for this vehicle.')
+
+    local vehicleGone = S.statusText({ status = 'cancelled', reason = 'vehicle_gone', fee = 200 }).line
+    local vehicleOccupied = S.statusText({ status = 'cancelled', reason = 'vehicle_occupied', fee = 200 }).line
+    local noDestination = S.statusText({ status = 'cancelled', reason = 'no_destination', fee = 200 }).line
+    T.eq(vehicleGone, 'Cancelled: the vehicle was no longer there. Nothing was charged.')
+    T.eq(vehicleOccupied, 'Cancelled: someone was in the vehicle. Nothing was charged.')
+    T.eq(noDestination, 'Cancelled: no yard could take the vehicle. Nothing was charged.')
+    T.truthy(vehicleGone ~= vehicleOccupied, 'vehicle_gone differs from vehicle_occupied')
+    T.truthy(vehicleGone ~= noDestination, 'vehicle_gone differs from no_destination')
+    T.truthy(vehicleOccupied ~= noDestination, 'vehicle_occupied differs from no_destination')
+    T.truthy(vehicleGone ~= 'Request cancelled.', 'vehicle_gone differs from the plain fallback')
+    T.truthy(vehicleOccupied ~= 'Request cancelled.', 'vehicle_occupied differs from the plain fallback')
+    T.truthy(noDestination ~= 'Request cancelled.', 'no_destination differs from the plain fallback')
+end)
+
+T.test('delivered names the place the owner can collect the vehicle from', function()
+    T.eq(S.statusText({ status = 'delivered', kind = 'repair', destination = 'LS Customs Burton', handoff = 'Legion Square garage' }).line,
+        'Delivered. Your vehicle is in the Legion Square garage.')
+    T.eq(S.statusText({ status = 'delivered', kind = 'impound', destination = 'LSPD Impound', handoff = 'Impound A' }).line,
+        'Delivered to Impound A.')
+    -- no hand-off (an unowned vehicle): the old sentence stands
+    T.eq(S.statusText({ status = 'delivered', kind = 'repair', destination = 'LS Customs Burton' }).line,
+        'Delivered to LS Customs Burton.')
+end)
+
+T.test('feeLine says what happened to the money, and never lies about it', function()
+    T.eq(S.feeLine({ fee = 200 }), 'Nothing was charged.')
+    T.eq(S.feeLine({ fee = 200, feeCharged = true, refund = 'refunded' }), 'Your $200 was paid back.')
+    T.eq(S.feeLine({ fee = 200, refund = 'owed' }), 'Your $200 will be paid back when you next open the app.')
+    T.eq(S.feeLine({ fee = 200, feeCharged = true }), nil)
+    T.eq(S.feeLine({ fee = 0 }), nil)
+    T.eq(S.feeLine(nil), nil)
+end)
+
+T.test('a cancelled request tells the truth about the fee', function()
+    T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_gone', fee = 200, refund = 'refunded' }).line,
+        'Cancelled: the vehicle was no longer there. Your $200 was paid back.')
+    T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_gone', fee = 200, refund = 'owed' }).line,
+        'Cancelled: the vehicle was no longer there. Your $200 will be paid back when you next open the app.')
+    T.eq(S.statusText({ status = 'cancelled', reason = 'vehicle_occupied', fee = 0 }).line,
+        'Cancelled: someone was in the vehicle.')
+end)
+
+T.test('a requester who cancels after the vehicle was hooked is told the fee came back', function()
+    -- hooked (the fee left the bank), put back in line, then cancelled by the requester
+    T.eq(S.statusText({ status = 'cancelled', reason = 'requester', fee = 200, refund = 'refunded' }).line,
+        'Request cancelled. Your $200 was paid back.')
+    T.eq(S.statusText({ status = 'cancelled', reason = 'requester', fee = 200, refund = 'owed' }).line,
+        'Request cancelled. Your $200 will be paid back when you next open the app.')
+    -- cancelled before the hook: nothing ever left the bank
+    T.eq(S.statusText({ status = 'cancelled', reason = 'requester', fee = 200 }).line,
+        'Request cancelled. Nothing was charged.')
+end)
+
+T.test('pickPhoto: our own image or nil', function()
+    T.eq(S.pickPhoto({ image = 'https://a/x.webp', fallbacks = { 'https://b/y.webp' } }), 'https://a/x.webp')
+    T.eq(S.pickPhoto({ fallbacks = { 'https://b/y.webp', 'https://c/z.png' } }), nil)
+    T.eq(S.pickPhoto({ image = '', fallbacks = {} }), nil)
+    T.eq(S.pickPhoto(nil), nil)
+    T.eq(S.pickPhoto('text'), nil)
+    T.eq(S.pickPhoto({ image = 12 }), nil)
+    T.eq(S.pickPhoto({ image = 'javascript:alert(1)' }), nil)
+    T.eq(S.pickPhoto({ image = 'http://a/x.webp' }), nil)
 end)
