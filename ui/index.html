@@ -13,7 +13,9 @@ html,body{height:100%;margin:0}
 body{display:flex;flex-direction:column;background:var(--cd-night);color:var(--cd-ink);font:14px/1.45 Roboto,system-ui,sans-serif}
 button{font:inherit;color:inherit;cursor:pointer}
 [hidden]{display:none !important}
-header{padding:18px 16px 10px;border-bottom:1px solid var(--cd-border);background:var(--cd-deep)}
+header{padding:18px 16px 10px;border-bottom:1px solid var(--cd-border);background:var(--cd-deep);display:flex;align-items:center;gap:12px}
+header .logo{height:26px;width:auto;flex:none}
+header .ttl{min-width:0}
 .t{font:700 13px/1 Orbitron,sans-serif;letter-spacing:2px;color:var(--cd-sun)}
 .sub{margin-top:6px;font-size:12px;color:var(--cd-dim)}
 .chips{display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--cd-border);background:var(--cd-deep)}
@@ -56,8 +58,11 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
 </head>
 <body>
 <header>
-  <div class="t">CITY SERVICES</div>
-  <div class="sub" id="who">Del Perro Sands</div>
+  <img class="logo" src="dps-logo.svg" alt="DelPerroSands">
+  <div class="ttl">
+    <div class="t">CITY SERVICES</div>
+    <div class="sub" id="who"></div>
+  </div>
 </header>
 <div class="chips" id="tabs" hidden>
   <button class="chip on" id="tab-request" data-tab="request">Request</button>
@@ -241,7 +246,7 @@ body[data-device="tablet"] main{max-width:720px;width:100%;margin:0 auto}
       main.innerHTML = '<div class="note bad">Tow dispatch is offline right now. Try again in a few minutes.</div>';
       return;
     }
-    $('who').textContent = S.state.me.name || 'Del Perro Sands';
+    $('who').textContent = S.state.me.name || '';
     var driver = S.state.me.isTowDriver && S.state.driver;
     $('tabs').hidden = !driver;
     if (!driver && S.tab === 'driver') S.tab = 'request';
