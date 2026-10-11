@@ -8,10 +8,11 @@
     fee        paid from the bank when the licence is issued
     needs      licences that must be held before the test (any one of each
                inner list; 'cdl_b' is also met by 'cdl_a')
+    truckerLevel  trucker career level (m-TruckerSimulator) needed first
 ]]
 
 Config.Licences = {
-    retrySec = 30 * 60,      -- wait after a failed test
+    retrySec = 30 * 60,       -- wait after a failed test
     testTimeoutSec = 30 * 60, -- an unanswered test is dropped after this
 
     list = {
@@ -22,7 +23,7 @@ Config.Licences = {
         tow = { label = 'Tow', group = 'commercial', questions = 10, pass = 8, fee = 750,
             needs = { { 'driver' }, { 'cdl_b' } } },
         hazmat = { label = 'Hazmat', group = 'commercial', questions = 10, pass = 8, fee = 1000,
-            needs = { { 'driver' }, { 'cdl_a' } } },
+            needs = { { 'driver' }, { 'cdl_a' } }, truckerLevel = 8 }, -- Damon 10-11: trucker level 8 first
         passenger = { label = 'Passenger', group = 'commercial', questions = 10, pass = 8, fee = 500,
             needs = { { 'driver' }, { 'cdl_b' } } },
 

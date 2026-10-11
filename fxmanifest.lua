@@ -21,6 +21,7 @@ server_scripts {
     'server/main.lua',
     'server/banks/*.lua',
     'server/licences.lua',
+    'server/trucker.lua',
 }
 
 -- The page is served into the phone and tablet frames. It is deliberately NOT

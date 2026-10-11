@@ -45,6 +45,15 @@ local function record(cid, id)
              passedAt = row.passed_at, issuedAt = row.issued_at }
 end
 
+--- What the licence rules need to know besides the licences held: the
+--- trucker career level from the trucker script's own table (0 if none).
+local function ctxFor(cid)
+    local ok, level = pcall(function()
+        return MySQL.scalar.await('SELECT level FROM trucker_players WHERE citizenid = ?', { cid })
+    end)
+    return { truckerLevel = ok and tonumber(level) or 0 }
+end
+
 local function bankFor(id)
     local bank = LicenceBanks[id]
     return type(bank) == 'table' and bank or {}
@@ -57,13 +66,15 @@ local function listFor(source)
     local have = heldBy(player)
     local cid = player.PlayerData.citizenid
     local now = os.time()
+    local ctx = ctxFor(cid)
     local rows = {}
     for id, row in pairs(LC.list) do
         local rec = record(cid, id)
-        local ok, reason = Licences.canTake(have, id)
+        local ok, reason = Licences.canTake(have, id, ctx)
         rows[#rows + 1] = {
             id = id, label = row.label, group = row.group, fee = row.fee,
             questions = row.questions, pass = row.pass,
+            truckerLevel = row.truckerLevel, myTruckerLevel = ctx.truckerLevel,
             held = have[id] == true,
             passed = rec ~= nil and rec.passedAt ~= nil and have[id] ~= true,
             waitSec = Licences.waitLeft(rec, now),
@@ -83,7 +94,7 @@ lib.callback.register('dps-services:licences:start', function(source, id)
     local row = LC.list[id]
     local player = getPlayer(source)
     if not row or not player then return { ok = false, reason = 'unknown' } end
-    local ok, reason = Licences.canTake(heldBy(player), id)
+    local ok, reason = Licences.canTake(heldBy(player), id, ctxFor(player.PlayerData.citizenid))
     if not ok then return { ok = false, reason = reason } end
     local rec = record(player.PlayerData.citizenid, id)
     if rec and rec.passedAt then return { ok = false, reason = 'already_passed' } end
@@ -127,9 +138,9 @@ lib.callback.register('dps-services:licences:pay', function(source, id)
     local result = (function()
         local have = heldBy(player)
         if have[id] == true then return { ok = false, reason = 'already_held' } end
-        local ok, reason = Licences.canTake(have, id) -- still holds what it needs (police may have taken the DL)
-        if not ok then return { ok = false, reason = reason } end
         local cid = player.PlayerData.citizenid
+        local ok, reason = Licences.canTake(have, id, ctxFor(cid)) -- still holds what it needs (police may have taken the DL)
+        if not ok then return { ok = false, reason = reason } end
         local rec = record(cid, id)
         if not rec or not rec.passedAt then return { ok = false, reason = 'not_passed' } end
         if not player.Functions.RemoveMoney('bank', row.fee, 'licence-' .. id) then

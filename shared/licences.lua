@@ -26,8 +26,9 @@ function Licences.holdsAll(have, ids)
 end
 
 --- May someone holding `have` sit the test for id?
+--- ctx.truckerLevel: their trucker career level (0 when they have none).
 --- @return boolean ok, string|nil reason
-function Licences.canTake(have, id)
+function Licences.canTake(have, id, ctx)
     local row = Config.Licences.list[id]
     if not row then return false, 'unknown' end
     have = type(have) == 'table' and have or {}
@@ -39,7 +40,17 @@ function Licences.canTake(have, id)
         end
         if not met then return false, 'need_' .. anyOf[1] end
     end
+    if row.truckerLevel and ((ctx and ctx.truckerLevel) or 0) < row.truckerLevel then
+        return false, 'need_trucker_level'
+    end
     return true
+end
+
+--- A trucker delivered a load: 'unlicensed' when it was hazardous and they
+--- hold no Hazmat licence (the pay is taken back and police are told).
+function Licences.hazmatVerdict(hazardous, have)
+    if not hazardous then return 'ok' end
+    return Licences.holds(have, 'hazmat') and 'ok' or 'unlicensed'
 end
 
 --- Draw n questions from a bank, shuffling each one's options.
