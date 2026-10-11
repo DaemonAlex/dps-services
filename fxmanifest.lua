@@ -26,7 +26,7 @@ server_scripts {
 
 -- The page is served into the phone and tablet frames. It is deliberately NOT
 -- a ui_page: this resource never takes NUI focus of its own.
-files { 'ui/index.html', 'ui/dps-logo.svg' }
+files { 'ui/index.html', 'ui/dps-logo.svg', 'ui/licences.js' }
 
 -- dps-towjob is NOT listed: FiveM force-stops dependents when a dependency
 -- restarts and does not bring them back, which would drop the app from the
