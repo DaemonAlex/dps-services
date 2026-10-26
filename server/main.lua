@@ -98,7 +98,7 @@ local function stateFor(source)
         me = {
             name = name,
             canImpound = job.onduty == true and cfg.emergencyJobTypes[job.type] == true,
-            isTowDriver = job.name == cfg.jobName,
+            isTowDriver = tow('IsTowDriver', source) == true,
         },
         fees = { repair = cfg.repairTowFee, impound = cfg.emergencyTowFee },
         request = withRequestPhoto(tow('GetRequestStatus', source)) or false,

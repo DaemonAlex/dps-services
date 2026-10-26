@@ -159,6 +159,24 @@ RegisterNUICallback('driverAnswer', function(data, cb)
     cb(ask('dps-services:driverAnswer', { ok = false, message = Services.reasonText('unavailable') }, data and data.jobId, data and data.accept == true))
 end)
 
+-- Licences tab. The page only ever sees the question sheet; marking, the retry
+-- wait and the fee all happen in server/licences.lua.
+RegisterNUICallback('licList', function(_, cb)
+    cb(ask('dps-services:licences:list', false))
+end)
+
+RegisterNUICallback('licStart', function(data, cb)
+    cb(ask('dps-services:licences:start', { ok = false, reason = 'unavailable' }, data and data.id))
+end)
+
+RegisterNUICallback('licSubmit', function(data, cb)
+    cb(ask('dps-services:licences:submit', { ok = false, reason = 'unavailable' }, data and data.answers))
+end)
+
+RegisterNUICallback('licPay', function(data, cb)
+    cb(ask('dps-services:licences:pay', { ok = false, reason = 'unavailable' }, data and data.id))
+end)
+
 RegisterNUICallback('gps', function(data, cb)
     local x, y = tonumber(data and data.x), tonumber(data and data.y)
     if x and y then SetNewWaypoint(x + 0.0, y + 0.0) end
